@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Articles on My New Hugo Site</title>
+    <title>Articles on Гише безкрайност</title>
     <link>http://localhost:1313/article/</link>
-    <description>Recent content in Articles on My New Hugo Site</description>
+    <description>Recent content in Articles on Гише безкрайност</description>
     <generator>Hugo</generator>
-    <language>en-us</language>
+    <language>bg-bg</language>
     <lastBuildDate></lastBuildDate>
     <atom:link href="http://localhost:1313/article/index.xml" rel="self" type="application/rss+xml" />
   </channel>
