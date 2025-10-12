@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="{{ site.Language.LanguageCode }}" dir="{{ or site.Language.LanguageDirection `ltr` }}">
+<html lang="bg" dir="ltr">
 <head>
   {{ partial "head.html" . }}
 </head>
-<body>
+<body class="min-h-screen flex flex-col">
+  <a href="#main-content" class="sr-only focus:not-sr-only">Към основното съдържание</a>
   <header>
     {{ partial "header.html" . }}
   </header>
-  <main>
+  <main id="main-content" class="flex-grow">
     {{ block "main" . }}{{ end }}
   </main>
   <footer>

@@ -1,3 +1,42 @@
 baseURL = 'https://gishe8.com/'
-languageCode = 'bg-bg'
-title = 'Гише безкрайност'
+languageCode = 'bg-BG'
+title = 'Гише ∞'
+theme = 'sarcastic'
+
+[params]
+defaultTheme = "system"
+homeArticleCount = 5
+excerptLength = 150
+description = "Сатиричен портал за безкрайната бюрокрация в България"
+
+[sitemap]
+changefreq = "weekly"
+filename = "sitemap.xml"
+priority = 0.5
+
+[minify]
+disableHTML = false
+disableCSS = false
+disableJS = false
+disableJSON = false
+disableSVG = false
+disableXML = false
+minifyOutput = true
+[minify.tdewolff]
+[minify.tdewolff.html]
+keepWhitespace = false
+
+[[menu.main]]
+name = 'Начало'
+pageRef = '/'
+weight = 10
+
+[[menu.main]]
+name = 'Статии'
+pageRef = '/article'
+weight = 20
+
+[[menu.main]]
+name = 'За нас'
+pageRef = '/about'
+weight = 30

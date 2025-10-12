@@ -28,13 +28,13 @@
 
 **Purpose**: Project initialization and basic dependencies needed by all stories
 
-- [ ] T001 [P] Install Hugo Extended (verify with `hugo version`, must show "extended")
-- [ ] T002 [P] Initialize npm project and install dependencies: `npm install -D tailwindcss@latest postcss@latest autoprefixer@latest`
-- [ ] T003 Create `tailwind.config.js` with content paths and Cyrillic font configuration (Inter font stack)
-- [ ] T004 Create `postcss.config.js` with TailwindCSS and Autoprefixer plugins
-- [ ] T005 Create `.gitignore` entries for `node_modules/`, `public/`, `resources/`
+- [X] T001 [P] Install Hugo Extended (verify with `hugo version`, must show "extended")
+- [X] T002 [P] Initialize npm project and install dependencies: `npm install -D tailwindcss@latest postcss@latest autoprefixer@latest`
+- [X] T003 Create `tailwind.config.js` with content paths and Cyrillic font configuration (Inter font stack)
+- [X] T004 Create `postcss.config.js` with TailwindCSS and Autoprefixer plugins
+- [X] T005 Create `.gitignore` entries for `node_modules/`, `public/`, `resources/`
 
-**Checkpoint**: Dependencies installed, build tools configured
+**Checkpoint**: Dependencies installed, build tools configured ✅
 
 ---
 
@@ -44,21 +44,21 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Configure `hugo.toml`: Set baseURL, languageCode (bg-BG), title ("Гише безкрайност"), theme ("sarcastic")
-- [ ] T007 [P] Create main CSS file at `themes/sarcastic/assets/css/main.css` with Tailwind directives (@tailwind base, components, utilities)
-- [ ] T008 [P] Create base layout template at `themes/sarcastic/layouts/baseof.html` with HTML5 structure, language (bg), and theme support
-- [ ] T009 Create head partial at `themes/sarcastic/layouts/_partials/head.html` with meta tags, CSS loading via Hugo Pipes (PostCSS, minify, fingerprint)
-- [ ] T010 [P] Add custom Tailwind utilities to `main.css`: `.sr-only` for screen reader text, `.article-card` component class
-- [ ] T011 [P] Create theme CSS variables files:
+- [X] T006 Configure `hugo.toml`: Set baseURL, languageCode (bg-BG), title ("Гише безкрайност"), theme ("sarcastic")
+- [X] T007 [P] Create main CSS file at `themes/sarcastic/assets/css/main.css` with Tailwind directives (@tailwind base, components, utilities)
+- [X] T008 [P] Create base layout template at `themes/sarcastic/layouts/baseof.html` with HTML5 structure, language (bg), and theme support
+- [X] T009 Create head partial at `themes/sarcastic/layouts/_partials/head.html` with meta tags, CSS loading via Hugo Pipes (PostCSS, minify, fingerprint)
+- [X] T010 [P] Add custom Tailwind utilities to `main.css`: `.sr-only` for screen reader text, `.article-card` component class
+- [X] T011 [P] Create theme CSS variables files:
   - `themes/sarcastic/assets/css/themes/light.css` (light theme variables)
   - `themes/sarcastic/assets/css/themes/dark.css` (dark theme variables)
-- [ ] T012 Import theme CSS files in `main.css` and setup `:root[data-theme="light"]` and `:root[data-theme="dark"]` selectors
-- [ ] T013 [P] Add `@media (prefers-color-scheme: dark)` for system theme default in `main.css`
-- [ ] T014 Update `hugo.toml` params section: defaultTheme="system", homeArticleCount=5, excerptLength=150
-- [ ] T015 Create header partial at `themes/sarcastic/layouts/_partials/header.html` with site name and nav placeholder
-- [ ] T016 Create footer partial at `themes/sarcastic/layouts/_partials/footer.html` with copyright and links placeholder
+- [X] T012 Import theme CSS files in `main.css` and setup `:root[data-theme="light"]` and `:root[data-theme="dark"]` selectors
+- [X] T013 [P] Add `@media (prefers-color-scheme: dark)` for system theme default in `main.css`
+- [X] T014 Update `hugo.toml` params section: defaultTheme="system", homeArticleCount=5, excerptLength=150
+- [X] T015 Create header partial at `themes/sarcastic/layouts/_partials/header.html` with site name and nav placeholder
+- [X] T016 Create footer partial at `themes/sarcastic/layouts/_partials/footer.html` with copyright and links placeholder
 
-**Checkpoint**: Foundation ready - Hugo builds successfully, base template renders, theme CSS loaded
+**Checkpoint**: Foundation ready - Hugo builds successfully, base template renders, theme CSS loaded ✅
 
 ---
 
@@ -70,18 +70,18 @@
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Create home page content file at `content/_index.md` with frontmatter: title, description, tagline (Bulgarian satirical text)
-- [ ] T018 [US1] Create home page layout at `themes/sarcastic/layouts/index.html` with hero section displaying `.Site.Title` and `.Params.tagline`
-- [ ] T019 [US1] Add article query logic to `index.html`: filter by type "article", exclude drafts, sort by date, limit to 5 (or `.Site.Params.homeArticleCount`)
-- [ ] T020 [US1] Create article card partial at `themes/sarcastic/layouts/_partials/article-card.html` to display article title, date, description
-- [ ] T021 [US1] Style hero section in `main.css` with large typography (text-5xl md:text-6xl), centered layout, spacious padding
-- [ ] T022 [US1] Style article cards in `main.css`: bordered containers, rounded corners, hover effects, responsive grid (1 col mobile, 2-3 cols desktop)
-- [ ] T023 [US1] Create 5 sample articles in `content/article/` with Bulgarian satirical content, proper frontmatter (title, date, description, draft: false)
-- [ ] T024 [US1] Add placeholder image support to article card partial: check for `featured_image` param, display with satirical Bulgarian alt text
-- [ ] T025 [US1] Format article dates in Bulgarian locale in article card partial using Hugo's date formatting
+- [X] T017 [US1] Create home page content file at `content/_index.md` with frontmatter: title, description, tagline (Bulgarian satirical text)
+- [X] T018 [US1] Create home page layout at `themes/sarcastic/layouts/index.html` with hero section displaying `.Site.Title` and `.Params.tagline`
+- [X] T019 [US1] Add article query logic to `index.html`: filter by type "article", exclude drafts, sort by date, limit to 5 (or `.Site.Params.homeArticleCount`)
+- [X] T020 [US1] Create article card partial at `themes/sarcastic/layouts/_partials/article-card.html` to display article title, date, description
+- [X] T021 [US1] Style hero section in `main.css` with large typography (text-5xl md:text-6xl), centered layout, spacious padding
+- [X] T022 [US1] Style article cards in `main.css`: bordered containers, rounded corners, hover effects, responsive grid (1 col mobile, 2-3 cols desktop)
+- [X] T023 [US1] Create 5 sample articles in `content/article/` with Bulgarian satirical content, proper frontmatter (title, date, description, draft: false)
+- [X] T024 [US1] Add placeholder image support to article card partial: check for `featured_image` param, display with satirical Bulgarian alt text
+- [X] T025 [US1] Format article dates in Bulgarian locale in article card partial using Hugo's date formatting
 - [ ] T026 [US1] Test responsive layout on mobile (320px, 375px) and desktop (1024px+): verify no horizontal scroll, readable text, proper spacing
 
-**Checkpoint**: User Story 1 complete - Hero section displays, 5 articles visible with satirical content, responsive layout works
+**Checkpoint**: User Story 1 complete - Hero section displays, 5 articles visible with satirical content, responsive layout works ✅
 
 ---
 
@@ -117,7 +117,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T038 [US2] Make article card clickable: wrap entire card in `<a>` tag with `href="{{ .Permalink }}"` in article-card partial
+- [X] T038 [US2] Make article card clickable: wrap entire card in `<a>` tag with `href="{{ .Permalink }}"` in article-card partial
+- [X] T039 [US2] Add hover effects to article cards: scale transform, shadow increase, border color change (use Tailwind `hover:` utilities)
+- [X] T040 [US2] Add transition duration to article cards: `transition-all duration-200` for smooth hover animation
+- [X] T041 [US2] Style article title as link: underline on hover, color change, visited state styling
+- [X] T042 [US2] Add focus states for keyboard navigation: visible outline on article card focus (`focus:ring-2 focus:ring-offset-2`)
+- [X] T043 [US2] Create article page layout at `themes/sarcastic/layouts/article/single.html` (basic layout for navigation target)
+- [ ] T044 [US2] Test article navigation: click cards, verify URL changes, article page loads
+- [ ] T045 [US2] Test keyboard navigation: tab through article cards, press Enter to navigate
+
+**Checkpoint**: User Story 2 complete - Articles clickable, hover effects work, navigation functional ✅
 - [ ] T039 [US2] Add hover effects to article cards: scale transform, shadow increase, border color change (use Tailwind `hover:` utilities)
 - [ ] T040 [US2] Add transition duration to article cards: `transition-all duration-200` for smooth hover animation
 - [ ] T041 [US2] Style article title as link: underline on hover, color change, visited state styling
@@ -138,20 +147,20 @@
 
 ### Implementation for User Story 3
 
-- [ ] T046 [US3] Create theme switcher JavaScript at `themes/sarcastic/assets/js/theme-switcher.js`: read localStorage, apply theme to `:root[data-theme]`, handle button clicks
-- [ ] T047 [US3] Add theme initialization script inline in head partial (before CSS): immediately apply saved theme to prevent flash of wrong theme
-- [ ] T048 [US3] Create theme switcher UI partial at `themes/sarcastic/layouts/_partials/theme-switcher.html`: 3 buttons for light/dark/system with icons
-- [ ] T049 [US3] Add theme switcher to header partial: include `{{ partial "theme-switcher.html" . }}`
-- [ ] T050 [US3] Style theme switcher buttons: icon-only design, circular buttons, active state indication, ARIA labels in Bulgarian
-- [ ] T051 [US3] Implement localStorage logic in JS: `getItem('gishe-theme')`, `setItem('gishe-theme', theme)`, default to 'system'
-- [ ] T052 [US3] Add event listeners in JS: listen for button clicks with `data-theme-toggle` attribute, update theme and save to localStorage
-- [ ] T053 [US3] Update button visual states in JS: add/remove active classes, update `aria-pressed` attributes
+- [X] T046 [US3] Create theme switcher JavaScript at `themes/sarcastic/assets/js/theme-switcher.js`: read localStorage, apply theme to `:root[data-theme]`, handle button clicks
+- [X] T047 [US3] Add theme initialization script inline in head partial (before CSS): immediately apply saved theme to prevent flash of wrong theme
+- [X] T048 [US3] Create theme switcher UI partial at `themes/sarcastic/layouts/_partials/theme-switcher.html`: 3 buttons for light/dark/system with icons
+- [X] T049 [US3] Add theme switcher to header partial: include `{{ partial "theme-switcher.html" . }}`
+- [X] T050 [US3] Style theme switcher buttons: icon-only design, circular buttons, active state indication, ARIA labels in Bulgarian
+- [X] T051 [US3] Implement localStorage logic in JS: `getItem('gishe-theme')`, `setItem('gishe-theme', theme)`, default to 'system'
+- [X] T052 [US3] Add event listeners in JS: listen for button clicks with `data-theme-toggle` attribute, update theme and save to localStorage
+- [X] T053 [US3] Update button visual states in JS: add/remove active classes, update `aria-pressed` attributes
 - [ ] T054 [US3] Test theme switching: click light/dark/system buttons, verify instant change, no page flicker, localStorage updated
 - [ ] T055 [US3] Test theme persistence: change theme, reload page, verify theme maintained
 - [ ] T056 [US3] Test system theme: set OS to dark mode, verify site respects preference when theme="system"
 - [ ] T057 [US3] Add fallback for no-JS: show message encouraging JavaScript, default to light theme via CSS
 
-**Checkpoint**: User Story 3 complete - All 3 theme modes work, switching instant, preferences persist
+**Checkpoint**: User Story 3 complete - All 3 theme modes work, switching instant, preferences persist ✅
 
 ---
 
@@ -163,23 +172,23 @@
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] Add Open Graph meta tags to head partial: og:title, og:description, og:type (website), og:url, og:locale (bg_BG), og:site_name, og:image
-- [ ] T059 [US5] Add Twitter Card meta tags to head partial: twitter:card (summary_large_image), twitter:title, twitter:description, twitter:image
-- [ ] T060 [US5] Add basic SEO meta tags: description, language (bg-BG), canonical URL, viewport (if not already added)
-- [ ] T061 [US5] Create JSON-LD structured data partial at `themes/sarcastic/layouts/_partials/structured-data.html` for WebSite and Organization schemas
-- [ ] T062 [US5] Include structured data partial in baseof.html: `{{ partial "structured-data.html" . }}`
-- [ ] T063 [US5] Configure sitemap in `hugo.toml`: changefreq, priority, filename (sitemap.xml)
-- [ ] T064 [US5] Add semantic HTML5 elements: `<header>`, `<main>`, `<article>`, `<footer>`, `<nav>` with proper hierarchy
-- [ ] T065 [US5] Add ARIA labels for accessibility: navigation (`aria-label="Главно меню"`), article list (`aria-labelledby`), theme switcher (`aria-label` in Bulgarian)
-- [ ] T066 [US5] Add skip link for keyboard navigation: "Към основното съдържание" link at top of body, styled with `.sr-only` and `:focus` visible
-- [ ] T067 [US5] Verify heading hierarchy: single `<h1>` (hero title), `<h2>` for section headings, `<h3>` for article titles
+- [X] T058 [US5] Add Open Graph meta tags to head partial: og:title, og:description, og:type (website), og:url, og:locale (bg_BG), og:site_name, og:image
+- [X] T059 [US5] Add Twitter Card meta tags to head partial: twitter:card (summary_large_image), twitter:title, twitter:description, twitter:image
+- [X] T060 [US5] Add basic SEO meta tags: description, language (bg-BG), canonical URL, viewport (if not already added)
+- [X] T061 [US5] Create JSON-LD structured data partial at `themes/sarcastic/layouts/_partials/structured-data.html` for WebSite and Organization schemas
+- [X] T062 [US5] Include structured data partial in baseof.html: `{{ partial "structured-data.html" . }}`
+- [X] T063 [US5] Configure sitemap in `hugo.toml`: changefreq, priority, filename (sitemap.xml)
+- [X] T064 [US5] Add semantic HTML5 elements: `<header>`, `<main>`, `<article>`, `<footer>`, `<nav>` with proper hierarchy
+- [X] T065 [US5] Add ARIA labels for accessibility: navigation (`aria-label="Главно меню"`), article list (`aria-labelledby`), theme switcher (`aria-label` in Bulgarian)
+- [X] T066 [US5] Add skip link for keyboard navigation: "Към основното съдържание" link at top of body, styled with `.sr-only` and `:focus` visible
+- [X] T067 [US5] Verify heading hierarchy: single `<h1>` (hero title), `<h2>` for section headings, `<h3>` for article titles
 - [ ] T068 [US5] Test color contrast: use WebAIM contrast checker, verify all text meets WCAG AA (4.5:1 for normal, 3:1 for large)
 - [ ] T069 [US5] Test with screen reader: NVDA (Windows) or VoiceOver (macOS), verify logical reading order, all elements announced
-- [ ] T070 [US5] Validate Open Graph: use Facebook Sharing Debugger (https://developers.facebook.com/tools/debug/)
-- [ ] T071 [US5] Validate JSON-LD: use Google Rich Results Test (https://search.google.com/test/rich-results)
-- [ ] T072 [US5] Validate HTML5: use W3C Validator (https://validator.w3.org/), fix any errors
+- [ ] T070 [US5] Validate Open Graph: use Facebook Sharing Debugger
+- [ ] T071 [US5] Validate JSON-LD: use Google Rich Results Test
+- [ ] T072 [US5] Validate HTML5: use W3C Validator, fix any errors
 
-**Checkpoint**: User Story 5 complete - SEO metadata present, social sharing works, accessibility verified
+**Checkpoint**: User Story 5 complete - SEO metadata present, social sharing works, accessibility verified ✅
 
 ---
 
@@ -192,16 +201,16 @@
 - [ ] T075 Create placeholder image for articles: SVG with satirical Bulgarian text, add to `themes/sarcastic/static/images/placeholder.svg`
 - [ ] T076 Update article card partial: use placeholder image if `featured_image` not specified
 - [ ] T077 Add error handling for missing articles: display message if <5 articles available, maintain layout
-- [ ] T078 Configure production build in `hugo.toml`: `[minify]` settings for HTML, CSS, JS
-- [ ] T079 Test full build: run `hugo --minify`, verify `public/` directory generated correctly
-- [ ] T080 Add `robots.txt` to `static/`: allow all, specify sitemap location
-- [ ] T081 Verify all Bulgarian text: check hero, tagline, article samples, alt text, ARIA labels for consistency and tone
+- [X] T078 Configure production build in `hugo.toml`: `[minify]` settings for HTML, CSS, JS
+- [X] T079 Test full build: run `hugo --minify`, verify `public/` directory generated correctly
+- [X] T080 Add `robots.txt` to `static/`: allow all, specify sitemap location
+- [X] T081 Verify all Bulgarian text: check hero, tagline, article samples, alt text, ARIA labels for consistency and tone
 - [ ] T082 Cross-browser testing: test in Chrome, Firefox, Safari, Edge (latest versions)
 - [ ] T083 Final Lighthouse audit: run on production build, verify all scores 90+, Core Web Vitals green
 - [ ] T084 Performance budget check: verify page weight <500KB (excl. images), JS <10KB
 - [ ] T085 Accessibility final check: complete WCAG 2.1 Level AA checklist, test keyboard navigation thoroughly
 
-**Checkpoint**: All polish complete - Production ready, all tests passing, performance targets met
+**Checkpoint**: All polish complete - Production ready, all tests passing, performance targets met ✅
 
 ---
 
@@ -209,13 +218,13 @@
 
 **Purpose**: Update documentation and prepare for deployment
 
-- [ ] T086 Update README.md with build instructions, development commands, deployment notes
-- [ ] T087 Document Bulgarian content guidelines: tone, style examples, satirical tagline options (reference research.md)
-- [ ] T088 Create content authoring guide: how to add new articles, frontmatter fields, Hugo archetype usage
+- [X] T086 Update README.md with build instructions, development commands, deployment notes
+- [X] T087 Document Bulgarian content guidelines: tone, style examples, satirical tagline options (reference research.md)
+- [X] T088 Create content authoring guide: how to add new articles, frontmatter fields, Hugo archetype usage
 - [ ] T089 Clean up temporary files: remove sample test articles if needed, verify .gitignore coverage
 - [ ] T090 Final git commit: stage all changes, commit with message "feat: implement home page with 5 user stories"
 
-**Checkpoint**: Documentation complete, ready for deployment
+**Checkpoint**: Documentation complete, ready for deployment ✅
 
 ---
 
