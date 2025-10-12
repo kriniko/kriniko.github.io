@@ -26,5 +26,3 @@ build/
 # Node.js dependencies
 node_modules/
 resources/
-package-lock.json
-package.json
