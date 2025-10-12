@@ -3,7 +3,7 @@
     <div class="text-2xl font-bold">
       <a href="/" class="hover:text-blue-500">{{ site.Title }}</a>
     </div>
-    <nav aria-label="Главно меню">
+    <nav aria-label="Главно меню" class="flex items-center gap-4">
       {{ partial "menu.html" (dict "menuID" "main" "page" .) }}
       {{ partial "theme-switcher.html" . }}
     </nav>
