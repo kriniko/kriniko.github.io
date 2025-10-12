@@ -42,6 +42,52 @@ hugo --minify
 # Изходът е в директория public/
 ```
 
+## Deployment (GitHub Pages)
+
+Сайтът автоматично се публикува на GitHub Pages при всеки push към `main` или `001-home-page` branch.
+
+### Настройка (еднократна)
+
+1. Отидете на Settings → Pages в GitHub репозиторито
+2. Под "Build and deployment" изберете:
+   - **Source**: Deploy from a branch
+   - **Branch**: gh-pages (ще бъде създаден автоматично)
+3. Уверете се, че в Settings → Actions → General:
+   - **Workflow permissions**: Read and write permissions е избрано
+
+### Как работи
+
+Workflow-ът използва [Hugo Deploy GitHub Pages](https://github.com/marketplace/actions/hugo-deploy-github-pages) action, който:
+- Билдва сайта с Hugo Extended v0.151.0
+- Push-ва резултата към `gh-pages` branch
+- GitHub Pages сервира сайта от този branch
+
+### Ръчно задействане
+
+```bash
+# Push промени към GitHub
+git push origin 001-home-page
+
+# Или ръчно от GitHub Actions таб
+# Actions → Deploy Hugo site → Run workflow
+```
+
+Сайтът ще бъде достъпен на: `https://kriniko.github.io/GisheNomerBezkrajnost/`
+
+### Custom Domain (опционално)
+
+За да използвате собствен домейн:
+
+1. Добавете домейна в `.github/workflows/deploy-hugo.yml`:
+   ```yaml
+   CNAME: 'gishe8.com'
+   ```
+
+2. Конфигурирайте DNS записите при вашия доставчик:
+   - CNAME запис: `gishe8.com` → `kriniko.github.io`
+
+3. В GitHub Settings → Pages добавете custom domain и активирайте HTTPS
+
 ## Структура на проекта
 
 ```
@@ -91,11 +137,3 @@ draft: false
 - Lighthouse Score: 90+
 - Page Weight: <500KB (без изображения)
 - Load Time: <2s на 3G
-
-## Лиценз
-
-MIT
-
-## Автор
-
-Сайтът е създаден със сарказъм и любов към българската бюрокрация. 🏛️
