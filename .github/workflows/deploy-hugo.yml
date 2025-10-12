@@ -43,7 +43,7 @@ jobs:
         env:
           HUGO_VERSION: '0.151.0'
           HUGO_EXTENDED: 'true'
-          HUGO_ARGS: '--minify --gc'
+          HUGO_ARGS: --minify --gc
           TARGET_REPO: kriniko/GisheNomerBezkrajnost
           TARGET_BRANCH: gh-pages
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
