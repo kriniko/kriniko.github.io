@@ -3,7 +3,7 @@ title: "Как смених адреса си… или почти"
 date: 2025-10-13
 description: "Реших да сменя адреса си. Колко сложно може да бъде?"
 draft: false
-featured_image: "/images/satirical-address-change.jpg"
+featured_image: "/images/satirical-address-change.jpeg"
 image_alt: "Колко да е сложно да се смени адрес"
 keywords:
   - смяна на адрес
