@@ -3,7 +3,7 @@ title: "Как се доказва, че си жив пред НОИ"
 date: 2025-10-20
 description: "Когато бюрокрацията не вярва на биологични факти."
 draft: false
-featured_image: "/images/dokaji-che-si-jiv.jpeg"
+featured_image: "/images/dokaji-che-si-jiv.jpg"
 image_alt: "Човек пред гише с удостоверение"
 keywords:
 - НОИ
