@@ -3,7 +3,7 @@ title: "Как се развеждаш без да се ожениш за сис
 date: 2025-10-23
 description: "Разводът е личен процес. Но не и според администрацията, която го превръща в обществено събитие с папки."
 draft: false
-featured_image: "/images/razvod.png"
+featured_image: "/images/razvod.jpg"
 image_alt: "Двама души с документи и тъжни физиономии"
 keywords:
 - развод
