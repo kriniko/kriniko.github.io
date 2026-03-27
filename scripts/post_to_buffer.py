@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Post the latest article to Facebook via Buffer's GraphQL API."""
+"""Post to Facebook via Buffer's GraphQL API.
+
+Supports two modes:
+  - Article post: image + teaser + link (from output.json)
+  - Social post: text-only or text + old article image (from social-output.json)
+"""
 
 import json
 import os
@@ -8,14 +13,11 @@ from pathlib import Path
 import requests
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_FILE = REPO_ROOT / "scripts" / "output.json"
-
 BUFFER_API = "https://api.buffer.com/rpc"
 
 
 def get_channel_id(headers):
     """Find the Гише ∞ Facebook channel."""
-    # Get org ID
     resp = requests.post(
         BUFFER_API,
         headers=headers,
@@ -26,7 +28,6 @@ def get_channel_id(headers):
     orgs = resp.json()["data"]["account"]["organizations"]
     org_id = orgs[0]["id"]
 
-    # Get channels
     resp = requests.post(
         BUFFER_API,
         headers=headers,
@@ -43,7 +44,6 @@ def get_channel_id(headers):
     resp.raise_for_status()
     channels = resp.json()["data"]["channels"]
 
-    # Find Facebook channel
     for ch in channels:
         if ch["service"] == "facebook":
             return ch["id"]
@@ -52,8 +52,20 @@ def get_channel_id(headers):
     sys.exit(1)
 
 
-def create_post(headers, channel_id, text, image_url):
+def create_post(headers, channel_id, text, image_url=None):
     """Create and publish a post via Buffer."""
+    post_input = {
+        "channelId": channel_id,
+        "text": text,
+        "schedulingType": "automatic",
+        "mode": "shareNow",
+        "metadata": {"facebook": {"type": "post"}},
+        "source": "api",
+    }
+
+    if image_url:
+        post_input["assets"] = {"images": [{"url": image_url}]}
+
     mutation = {
         "query": """
             mutation CreatePost($input: CreatePostInput!) {
@@ -70,17 +82,7 @@ def create_post(headers, channel_id, text, image_url):
                 }
             }
         """,
-        "variables": {
-            "input": {
-                "channelId": channel_id,
-                "text": text,
-                "schedulingType": "automatic",
-                "mode": "shareNow",
-                "metadata": {"facebook": {"type": "post"}},
-                "assets": {"images": [{"url": image_url}]},
-                "source": "api",
-            }
-        },
+        "variables": {"input": post_input},
     }
 
     resp = requests.post(BUFFER_API, headers=headers, json=mutation, timeout=30)
@@ -98,26 +100,15 @@ def create_post(headers, channel_id, text, image_url):
         sys.exit(1)
 
 
-def main():
-    buffer_key = os.environ.get("BUFFER_API_KEY")
-    if not buffer_key:
-        print("ERROR: BUFFER_API_KEY not set")
+def post_article(headers, channel_id):
+    """Post a new article with image + teaser."""
+    output_file = REPO_ROOT / "scripts" / "output.json"
+    if not output_file.exists():
+        print("ERROR: output.json not found")
         sys.exit(1)
 
-    if not OUTPUT_FILE.exists():
-        print("ERROR: output.json not found — run generate_poem.py first")
-        sys.exit(1)
+    output = json.loads(output_file.read_text(encoding="utf-8"))
 
-    output = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
-    headers = {
-        "Authorization": f"Bearer {buffer_key}",
-        "Content-Type": "application/json",
-    }
-
-    channel_id = get_channel_id(headers)
-    print(f"Channel: {channel_id}")
-
-    # Build post text
     teaser = output.get("teaser", "")
     article_url = output["article_url"]
 
@@ -132,10 +123,46 @@ def main():
 
 #бюрокрация #сатира #гише #България"""
 
-    image_url = output["image_url"]
+    create_post(headers, channel_id, post_text, output.get("image_url"))
 
-    print(f"Posting to Facebook...")
-    create_post(headers, channel_id, post_text, image_url)
+
+def post_social(headers, channel_id):
+    """Post a social-only post (meme, hook, quote, etc.)."""
+    output_file = REPO_ROOT / "scripts" / "social-output.json"
+    if not output_file.exists():
+        print("ERROR: social-output.json not found")
+        sys.exit(1)
+
+    output = json.loads(output_file.read_text(encoding="utf-8"))
+
+    text = output["text"]
+    image_url = output.get("image_url")
+
+    create_post(headers, channel_id, text, image_url)
+
+
+def main():
+    buffer_key = os.environ.get("BUFFER_API_KEY")
+    if not buffer_key:
+        print("ERROR: BUFFER_API_KEY not set")
+        sys.exit(1)
+
+    mode = sys.argv[1] if len(sys.argv) > 1 else "article"
+
+    headers = {
+        "Authorization": f"Bearer {buffer_key}",
+        "Content-Type": "application/json",
+    }
+
+    channel_id = get_channel_id(headers)
+    print(f"Channel: {channel_id}")
+    print(f"Mode: {mode}")
+
+    if mode == "social":
+        post_social(headers, channel_id)
+    else:
+        post_article(headers, channel_id)
+
     print("Done!")
 
 

@@ -1,0 +1,47 @@
+name: Social Media Post
+
+on:
+  schedule:
+    # Tuesday, Wednesday, Friday at 11:00 UTC (13:00 Sofia time)
+    - cron: '0 11 * * 2'
+    - cron: '0 11 * * 3'
+    - cron: '0 11 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Generate social post
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/generate_social.py
+
+      - name: Post to Buffer
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: python scripts/post_to_buffer.py social
+
+      - name: Commit social history
+        run: |
+          git config user.name "Kristina"
+          git config user.email "kriniko@gmail.com"
+          git add content/social-history.json
+          git diff --cached --quiet || git commit -m "chore: update social post history - $(date +%Y-%m-%d)"
+          git push || true

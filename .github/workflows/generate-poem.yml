@@ -1,9 +1,10 @@
-name: Weekly Satirical Poem
+name: Publish Satirical Poem
 
 on:
   schedule:
-    # Every Wednesday at 10:00 UTC (12:00 Sofia time)
-    - cron: '0 10 * * 3'
+    # Monday and Thursday at 10:00 UTC (12:00 Sofia time)
+    - cron: '0 10 * * 1'
+    - cron: '0 10 * * 4'
   workflow_dispatch:
     inputs:
       topic:
@@ -46,7 +47,7 @@ jobs:
           git config user.name "Kristina"
           git config user.email "kriniko@gmail.com"
           git add content/ static/images/
-          git commit -m "feat: weekly poem - $(date +%Y-%m-%d)
+          git commit -m "feat: new poem - $(date +%Y-%m-%d)
 
           Auto-generated satirical article about Bulgarian bureaucracy.
 
@@ -59,4 +60,4 @@ jobs:
       - name: Post to Buffer
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
-        run: python scripts/post_to_buffer.py
+        run: python scripts/post_to_buffer.py article
