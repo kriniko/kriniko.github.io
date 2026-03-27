@@ -21,8 +21,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -46,6 +44,7 @@ jobs:
         run: |
           git config user.name "Kristina"
           git config user.email "kriniko@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/kriniko/kriniko.github.io.git
           git add content/ static/images/
           git commit -m "feat: new poem - $(date +%Y-%m-%d)
 
