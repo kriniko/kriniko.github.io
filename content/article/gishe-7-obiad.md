@@ -3,7 +3,7 @@ title: "Гише 7 затваря на обяд от 11:00 до 16:00"
 date: 2025-10-09
 description: "Новото работно време на най-популярното гише в града предизвика въпроси: кога всъщност е отворено?"
 draft: false
-featured_image: "/images/documents.jpeg"
+featured_image: "/images/gishe-7-obiad.jpeg"
 image_alt: "Табела с работно време на гише"
 keywords:
   - гише

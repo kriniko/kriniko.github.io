@@ -3,7 +3,7 @@ title: "Дигитализацията: Сега може да подавате 
 date: 2025-10-08
 description: "Новата електронна система за подаване на документи е факт. Но има едно малко условие..."
 draft: false
-featured_image: ""
+featured_image: "/images/digitalizaciq-na-mqsto.jpeg"
 image_alt: "Компютър и опашка от хора пред гише"
 keywords:
   - дигитализация

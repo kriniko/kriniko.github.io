@@ -3,7 +3,7 @@ title: "Данъчна декларация 2025: Само 127 стъпки до
 date: 2025-10-12
 description: "НАП представя новата процедура за подаване на данъчна декларация, която изисква само 3 посещения, 17 документа и безкрайно търпение"
 draft: false
-featured_image: "/images/bureaucracy.jpeg"
+featured_image: "/images/danachna-deklaraciq-2025.jpeg"
 image_alt: "Отчаян човек пред планината от документи за НАП"
 keywords:
   - НАП

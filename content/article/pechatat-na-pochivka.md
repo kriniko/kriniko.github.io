@@ -3,7 +3,7 @@ title: "Печатът е на почивка до вторник"
 date: 2025-10-06
 description: "Критична ситуация в община Безнадеждово: единственият печат е в отпуск"
 draft: false
-featured_image: ""
+featured_image: "/images/pechatat-na-pochivka.jpeg"
 image_alt: "Табела - Печатът е временно недостъпен"
 keywords:
   - печат

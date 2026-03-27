@@ -3,7 +3,7 @@ title: "Декларация на отчаянието: Как да отпише
 date: 2025-10-14
 description: "НАП представя новата процедура за отписване на москвич, изискваща само 3 посещения, 17 документа и безкрайно търпение (и нерви, и валидна телепортация)"
 draft: false
-featured_image: "/images/bureaucracy.jpeg"
+featured_image: "/images/deklaracia-na-otchaqnieto.jpeg"
 image_alt: "Отчаян човек пред планината от документи за НАП"
 keywords:
   - НАП

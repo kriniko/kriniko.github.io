@@ -3,7 +3,7 @@ title: "Гише 7 и Гише 12: Вечната война за компете
 date: 2025-10-05
 description: "Епичната битка между две гишета кое е по-некомпетентно да обработи вашия документ"
 draft: false
-featured_image: ""
+featured_image: "/images/vojna-na-gishetata.jpeg"
 image_alt: "Два чиновника се спорят пред компютър"
 keywords:
   - гише

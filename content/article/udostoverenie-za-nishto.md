@@ -3,7 +3,7 @@ title: "Удостоверение, че нямате нужда от удост
 date: 2025-10-07
 description: "Новата услуга от НАП изисква доказателство, че не ви трябва доказателство"
 draft: false
-featured_image: ""
+featured_image: "/images/udostoverenie-za-nishto.jpeg"
 image_alt: "Човек с куп печати и подписи"
 keywords:
   - удостоверение

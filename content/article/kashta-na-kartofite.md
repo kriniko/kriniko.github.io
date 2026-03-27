@@ -3,7 +3,7 @@ title: "Как построих къща... след 19 процедури, 2 г
 date: 2025-10-12T07:00:00+03:00
 description: "Е колко да отнеме едно разрешително за строеж..."
 draft: false
-featured_image: "/images/kashta-na-kartofite-featured.png"
+featured_image: "/images/kashta-na-kartofite.jpeg"
 tags: ["сатира", "бюрокрация", "земеделска земя"]
 ---
 
