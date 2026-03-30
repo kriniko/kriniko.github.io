@@ -3,7 +3,7 @@ title: "НАП: Винаги отворени (когато са затворе�
 date: 2025-10-12
 description: "Когато отидеш в НАП да подадеш данъчна декларация, но се окаже, че трябва да дойдеш във вторник между 14:17 и 14:23"
 draft: false
-featured_image: "/images/nap.jpeg"
+featured_image: "/images/nap.jpg"
 image_alt: "Табела с неразбираемо работно време на НАП"
 keywords:
   - НАП
