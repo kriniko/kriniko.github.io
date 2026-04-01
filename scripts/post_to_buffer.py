@@ -47,7 +47,7 @@ def get_channel_id(headers):
         json={
             "query": """
                 query($input: ChannelsInput!) {
-                    channels(input: $input) { id name service serviceType }
+                    channels(input: $input) { id name service }
                 }
             """,
             "variables": {"input": {"organizationId": org_id}},
