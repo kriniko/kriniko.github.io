@@ -38,6 +38,8 @@ jobs:
       - name: Generate poem
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CANVA_API_KEY: ${{ secrets.CANVA_API_KEY }}
+          CANVA_TEMPLATE_ID: ${{ secrets.CANVA_TEMPLATE_ID }}
         run: python scripts/generate_poem.py
 
       - name: Commit and push
@@ -59,4 +61,11 @@ jobs:
       - name: Post to Buffer
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_FACEBOOK_CHANNEL_ID: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_ID }}
+          BUFFER_FACEBOOK_CHANNEL_NAME: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_NAME }}
         run: python scripts/post_to_buffer.py article
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Poem generation or publishing failed — check the steps above."

@@ -34,6 +34,8 @@ jobs:
       - name: Post to Buffer
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_FACEBOOK_CHANNEL_ID: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_ID }}
+          BUFFER_FACEBOOK_CHANNEL_NAME: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_NAME }}
         run: python scripts/post_to_buffer.py social
 
       - name: Commit social history
@@ -43,4 +45,9 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/kriniko/kriniko.github.io.git
           git add content/social-history.json
           git diff --cached --quiet || git commit -m "chore: update social post history - $(date +%Y-%m-%d)"
-          git push || true
+          git push
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Social post generation or publishing failed — check the steps above."
