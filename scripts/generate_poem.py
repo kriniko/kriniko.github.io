@@ -17,6 +17,10 @@ IMAGES_DIR = REPO_ROOT / "static" / "images"
 QUEUE_FILE = REPO_ROOT / "content" / "topics-queue.txt"
 HISTORY_FILE = REPO_ROOT / "content" / "topics-history.json"
 
+MODEL = "gemini-2.5-flash"
+REVIEW_THRESHOLD = 7
+MAX_REWRITES = 2
+
 INSTITUTIONS = [
     "НАП", "НОИ", "КАТ", "ТЕЛК", "община", "митница", "нотариус",
     "кадастър", "ДНСК", "МВР", "ГРАО", "Агенция по вписванията",
@@ -41,16 +45,42 @@ STYLE_PROMPT = """Ти си български сатиричен писател
 
 ФОРМАТ: Фейлетон от 300-600 думи. НЕ повтаряй теми или имена от предишни статии."""
 
+REVIEW_PROMPT_TEMPLATE = """Ти си литературен редактор специализиран в българска сатира.
+Оценяваш фейлетони по следните критерии:
+- Сатира: остра ли е иронията, ескалира ли абсурдът?
+- Език: естествен ли е българският, има ли частици и текстура?
+- Оригиналност: свеж ли е ъгълът, различен ли е от предишни теми?
+
+Оцени този фейлетон:
+
+ЗАГЛАВИЕ: {title}
+
+ТЕКСТ:
+{poem_body}
+
+Върни САМО валиден JSON, без markdown форматиране:
+{{
+  "score": <1-10>,
+  "satire": "<кратка оценка>",
+  "language": "<кратка оценка>",
+  "originality": "<кратка оценка>",
+  "verdict": "<publish или rewrite>",
+  "feedback": "<null ако publish, конкретни инструкции за подобрение ако rewrite>"
+}}"""
+
+
 def load_history():
     if HISTORY_FILE.exists():
         return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
     return []
+
 
 def save_history(history):
     HISTORY_FILE.write_text(
         json.dumps(history, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
+
 
 def pick_topic(client, history):
     # Check queue first
@@ -72,7 +102,7 @@ def pick_topic(client, history):
     # AI picks a topic
     used_topics = [h["topic"] for h in history]
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=MODEL,
         contents=f"""Избери ЕДНА конкретна тема за сатиричен фейлетон за българската бюрокрация.
 
 Темата трябва да е конкретна ситуация (не просто институция), например:
@@ -88,24 +118,71 @@ def pick_topic(client, history):
     )
     return response.text.strip().strip('"')
 
-def generate_poem(client, topic, history):
+
+def generate_poem(client, topic, history, feedback=None):
     used_topics = [h["topic"] for h in history]
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=f"""{STYLE_PROMPT}
+    prompt = f"""{STYLE_PROMPT}
 
 ВЕЧЕ ИЗПОЛЗВАНИ ТЕМИ (НЕ повтаряй): {json.dumps(used_topics, ensure_ascii=False)}
 
 ТЕМА: {topic}
 
 Напиши фейлетона. Започни с заглавие на първия ред (без кавички, без "Заглавие:").
-После празен ред и текста.""",
-    )
+После празен ред и текста."""
+
+    if feedback:
+        prompt += f"\n\nОБРАТНА ВРЪЗКА ОТ РЕДАКТОР (вземи предвид): {feedback}"
+
+    response = client.models.generate_content(model=MODEL, contents=prompt)
     return response.text.strip()
+
+
+def review_and_score(client, title, poem_body, topic, history):
+    """Review a poem draft. Returns dict with title, poem_body, score."""
+    best = {"title": title, "poem_body": poem_body, "score": 0}
+
+    for attempt in range(1 + MAX_REWRITES):
+        review_prompt = REVIEW_PROMPT_TEMPLATE.format(title=title, poem_body=poem_body)
+
+        response = client.models.generate_content(model=MODEL, contents=review_prompt)
+        review_text = response.text.strip()
+
+        # Extract JSON from possible markdown code block
+        if "```" in review_text:
+            match = re.search(r"```(?:json)?\s*(.*?)```", review_text, re.DOTALL)
+            if match:
+                review_text = match.group(1)
+
+        try:
+            review = json.loads(review_text)
+        except json.JSONDecodeError:
+            print(f"  Review attempt {attempt + 1}: JSON parse error, treating as pass")
+            best = {"title": title, "poem_body": poem_body, "score": 7}
+            break
+
+        score = review["score"]
+        print(f"  Review attempt {attempt + 1}: score={score}, verdict={review['verdict']}")
+
+        if score > best["score"]:
+            best = {"title": title, "poem_body": poem_body, "score": score}
+
+        if review["verdict"] == "publish" or score >= REVIEW_THRESHOLD:
+            best = {"title": title, "poem_body": poem_body, "score": score}
+            break
+
+        if attempt < MAX_REWRITES:
+            print(f"  Rewriting with feedback: {review['feedback']}")
+            rewrite_full = generate_poem(client, topic, history, feedback=review["feedback"])
+            lines = rewrite_full.split("\n", 1)
+            title = lines[0].strip().strip("#").strip()
+            poem_body = lines[1].strip() if len(lines) > 1 else rewrite_full
+
+    return best
+
 
 def generate_metadata(client, title, poem_text):
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=MODEL,
         contents=f"""За тази българска сатирична статия, генерирай метаданни в JSON формат:
 
 ЗАГЛАВИЕ: {title}
@@ -116,7 +193,7 @@ def generate_metadata(client, title, poem_text):
   "description": "кратко описание до 160 символа на български",
   "slug": "slug-na-latinica-bez-specialni-znaci",
   "image_alt": "описание на илюстрация на български",
-  "image_prompt": "Detailed English prompt for Donio Donev style black-and-white ink cartoon illustrating this specific story. Minimalist bold lines, exaggerated figures, satirical political cartoon. Any text in the image must be in Bulgarian.",
+  "image_prompt": "Detailed English prompt for black-and-white ink cartoon illustration in minimalist satirical style with bold lines and exaggerated figures, illustrating this specific story. No signatures or artist names anywhere on the image. Any text in the image must be in Bulgarian.",
   "keywords": ["ключова1", "ключова2", "ключова3"],
   "teaser": "кратък тийзър за Facebook пост — 2-3 изречения, закачливи, с линк placeholder {{link}}"
 }}""",
@@ -126,6 +203,7 @@ def generate_metadata(client, title, poem_text):
     if "```" in text:
         text = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL).group(1)
     return json.loads(text)
+
 
 def create_article(title, poem_body, metadata, today):
     slug = metadata["slug"]
@@ -146,60 +224,6 @@ keywords:
     filepath.write_text(md_content, encoding="utf-8")
     return slug, filepath
 
-def main():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("ERROR: GEMINI_API_KEY not set")
-        sys.exit(1)
-
-    client = genai.Client(api_key=api_key)
-    history = load_history()
-    today = date.today()
-
-    # 1. Pick topic
-    topic = pick_topic(client, history)
-    print(f"Topic: {topic}")
-
-    # 2. Generate poem
-    poem_full = generate_poem(client, topic, history)
-    lines = poem_full.split("\n", 1)
-    title = lines[0].strip().strip("#").strip()
-    poem_body = lines[1].strip() if len(lines) > 1 else poem_full
-
-    print(f"Title: {title}")
-
-    # 3. Generate metadata
-    metadata = generate_metadata(client, title, poem_body)
-    slug = metadata["slug"]
-    print(f"Slug: {slug}")
-
-    # 4. Create article file
-    slug, filepath = create_article(title, poem_body, metadata, today)
-    print(f"Article: {filepath}")
-
-    # 5. Create cover image via Canva, falling back to a styled placeholder
-    if not create_canva_image(slug, title, metadata.get("image_prompt", "")):
-        create_placeholder_image(slug, title)
-
-    # 6. Update history
-    history.append({"topic": topic, "slug": slug, "date": today.isoformat()})
-    save_history(history)
-
-    # 7. Output for next steps
-    output = {
-        "slug": slug,
-        "title": title,
-        "teaser": metadata.get("teaser", ""),
-        "image_prompt": metadata.get("image_prompt", ""),
-        "article_url": f"https://gisheto.com/article/{slug}/",
-        "image_url": f"https://gisheto.com/images/{slug}.jpeg",
-    }
-    # Write outputs for the workflow
-    output_file = REPO_ROOT / "scripts" / "output.json"
-    output_file.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Output: {output_file}")
-
-    return output
 
 def create_canva_image(slug, title, image_prompt=""):
     """Create article cover image using Canva autofill API.
@@ -320,7 +344,7 @@ def create_canva_image(slug, title, image_prompt=""):
 
 
 def create_placeholder_image(slug, title):
-    """Create a styled placeholder image when Canva/Imagen is not available."""
+    """Create a styled placeholder image."""
     from PIL import Image, ImageDraw, ImageFont
 
     width, height = 1200, 900
@@ -330,11 +354,10 @@ def create_placeholder_image(slug, title):
     # Draw border
     draw.rectangle([20, 20, width - 20, height - 20], outline="#2d2d2d", width=3)
 
-    # Draw decorative lines (Donev-inspired)
+    # Draw decorative lines
     for y in range(100, 800, 120):
         draw.line([(60, y), (width - 60, y)], fill="#e0e0d8", width=1)
 
-    # "Гише ∞" branding
     try:
         font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
         font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
@@ -362,6 +385,68 @@ def create_placeholder_image(slug, title):
 
     img.save(IMAGES_DIR / f"{slug}.jpeg", "JPEG", quality=90)
     print(f"Image: {IMAGES_DIR / slug}.jpeg")
+
+
+def main():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("ERROR: GEMINI_API_KEY not set")
+        sys.exit(1)
+
+    client = genai.Client(api_key=api_key)
+    history = load_history()
+    today = date.today()
+
+    # 1. Pick topic
+    topic = pick_topic(client, history)
+    print(f"Topic: {topic}")
+
+    # 2. Generate poem
+    poem_full = generate_poem(client, topic, history)
+    lines = poem_full.split("\n", 1)
+    title = lines[0].strip().strip("#").strip()
+    poem_body = lines[1].strip() if len(lines) > 1 else poem_full
+    print(f"Title: {title}")
+
+    # 3. Review and score (may rewrite up to 2 times)
+    print("Reviewing...")
+    reviewed = review_and_score(client, title, poem_body, topic, history)
+    title = reviewed["title"]
+    poem_body = reviewed["poem_body"]
+    print(f"Final score: {reviewed['score']}")
+
+    # 4. Generate metadata
+    metadata = generate_metadata(client, title, poem_body)
+    slug = metadata["slug"]
+    print(f"Slug: {slug}")
+
+    # 5. Create article file
+    slug, filepath = create_article(title, poem_body, metadata, today)
+    print(f"Article: {filepath}")
+
+    # 6. Create cover image via Canva, falling back to a styled placeholder
+    if not create_canva_image(slug, title, metadata.get("image_prompt", "")):
+        create_placeholder_image(slug, title)
+
+    # 7. Update history
+    history.append({"topic": topic, "slug": slug, "date": today.isoformat()})
+    save_history(history)
+
+    # 8. Output for next steps
+    output = {
+        "slug": slug,
+        "title": title,
+        "teaser": metadata.get("teaser", ""),
+        "image_prompt": metadata.get("image_prompt", ""),
+        "article_url": f"https://gisheto.com/article/{slug}/",
+        "image_url": f"https://gisheto.com/images/{slug}.jpeg",
+    }
+    output_file = REPO_ROOT / "scripts" / "output.json"
+    output_file.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Output: {output_file}")
+
+    return output
+
 
 if __name__ == "__main__":
     main()
