@@ -17,7 +17,20 @@ BUFFER_API = "https://api.buffer.com/rpc"
 
 
 def get_channel_id(headers):
-    """Find the Гише ∞ Facebook channel."""
+    """Find the Facebook channel for Гише ∞.
+
+    Resolution order:
+    1. BUFFER_FACEBOOK_CHANNEL_ID env var (direct override, skips API lookup).
+    2. First channel whose name contains BUFFER_FACEBOOK_CHANNEL_NAME (case-insensitive).
+    3. First Facebook *group* channel (serviceType == "group").
+    4. First Facebook channel of any type.
+    """
+    # 1. Direct override
+    channel_id = os.environ.get("BUFFER_FACEBOOK_CHANNEL_ID")
+    if channel_id:
+        print(f"Using channel from BUFFER_FACEBOOK_CHANNEL_ID: {channel_id}")
+        return channel_id
+
     resp = requests.post(
         BUFFER_API,
         headers=headers,
@@ -34,7 +47,7 @@ def get_channel_id(headers):
         json={
             "query": """
                 query($input: ChannelsInput!) {
-                    channels(input: $input) { id name service }
+                    channels(input: $input) { id name service serviceType }
                 }
             """,
             "variables": {"input": {"organizationId": org_id}},
@@ -44,12 +57,26 @@ def get_channel_id(headers):
     resp.raise_for_status()
     channels = resp.json()["data"]["channels"]
 
-    for ch in channels:
-        if ch["service"] == "facebook":
+    facebook_channels = [ch for ch in channels if ch["service"] == "facebook"]
+
+    if not facebook_channels:
+        print("ERROR: No Facebook channel found in Buffer")
+        sys.exit(1)
+
+    # 2. Match by configured name
+    channel_name = os.environ.get("BUFFER_FACEBOOK_CHANNEL_NAME", "")
+    if channel_name:
+        for ch in facebook_channels:
+            if channel_name.lower() in ch["name"].lower():
+                return ch["id"]
+
+    # 3. Prefer group over page
+    for ch in facebook_channels:
+        if ch.get("serviceType") == "group":
             return ch["id"]
 
-    print("ERROR: No Facebook channel found in Buffer")
-    sys.exit(1)
+    # 4. Fall back to first Facebook channel
+    return facebook_channels[0]["id"]
 
 
 def create_post(headers, channel_id, text, image_url=None):
