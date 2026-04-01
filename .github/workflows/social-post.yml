@@ -2,10 +2,12 @@ name: Social Media Post
 
 on:
   schedule:
-    # Tuesday, Wednesday, Friday at 11:00 UTC (13:00 Sofia time)
+    # Every day except Mon & Thu (poem days) at 11:00 UTC (13:00 Sofia time)
+    - cron: '0 11 * * 0'
     - cron: '0 11 * * 2'
     - cron: '0 11 * * 3'
     - cron: '0 11 * * 5'
+    - cron: '0 11 * * 6'
   workflow_dispatch:
 
 permissions:
