@@ -30,12 +30,12 @@ jobs:
 
       - name: Generate social post
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINIAPI }}
         run: python scripts/generate_social.py
 
       - name: Post to Buffer
         env:
-          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_API_KEY: ${{ secrets.BUFFERAPI }}
           BUFFER_FACEBOOK_CHANNEL_ID: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_ID }}
           BUFFER_FACEBOOK_CHANNEL_NAME: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_NAME }}
         run: python scripts/post_to_buffer.py social
@@ -44,7 +44,7 @@ jobs:
         run: |
           git config user.name "Kristina"
           git config user.email "kriniko@gmail.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/kriniko/kriniko.github.io.git
+          git remote set-url origin https://x-access-token:${{ secrets.GHP }}@github.com/kriniko/kriniko.github.io.git
           git add content/social-history.json
           git diff --cached --quiet || git commit -m "chore: update social post history - $(date +%Y-%m-%d)"
           git push

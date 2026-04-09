@@ -37,7 +37,7 @@ jobs:
 
       - name: Generate poem
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINIAPI }}
           CANVA_API_KEY: ${{ secrets.CANVA_API_KEY }}
           CANVA_TEMPLATE_ID: ${{ secrets.CANVA_TEMPLATE_ID }}
         run: python scripts/generate_poem.py
@@ -46,7 +46,7 @@ jobs:
         run: |
           git config user.name "Kristina"
           git config user.email "kriniko@gmail.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/kriniko/kriniko.github.io.git
+          git remote set-url origin https://x-access-token:${{ secrets.GHP }}@github.com/kriniko/kriniko.github.io.git
           git add content/ static/images/
           git commit -m "feat: new poem - $(date +%Y-%m-%d)
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: Post to Buffer
         env:
-          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_API_KEY: ${{ secrets.BUFFERAPI }}
           BUFFER_FACEBOOK_CHANNEL_ID: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_ID }}
           BUFFER_FACEBOOK_CHANNEL_NAME: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_NAME }}
         run: python scripts/post_to_buffer.py article
