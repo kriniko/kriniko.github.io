@@ -5,11 +5,15 @@ import json
 import os
 import random
 import sys
+import time
 from datetime import date
 from pathlib import Path
 from google import genai
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
+MAX_API_RETRIES = 3
+API_RETRY_DELAY = 30
 SOCIAL_HISTORY_FILE = REPO_ROOT / "content" / "social-history.json"
 CONTENT_DIR = REPO_ROOT / "content" / "article"
 
@@ -376,11 +380,31 @@ def generate_social_post(client, social_history):
                 "image_url": f"https://gisheto.com/images/{article['slug']}.jpeg",
             }
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt + "\n\nВАЖНО: Върни САМО ЕДИН пост, готов за публикуване. Без варианти, без номерация, без 'Вариант 1'.",
-    )
-    text = response.text.strip()
+    full_prompt = prompt + "\n\nВАЖНО: Върни САМО ЕДИН пост, готов за публикуване. Без варианти, без номерация, без 'Вариант 1'."
+
+    # Call with retry and model fallback
+    for model in MODELS:
+        for attempt in range(MAX_API_RETRIES):
+            try:
+                response = client.models.generate_content(model=model, contents=full_prompt)
+                text = response.text.strip()
+                break
+            except Exception as e:
+                err_str = str(e)
+                is_overloaded = any(k in err_str for k in ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED"])
+                if is_overloaded and attempt < MAX_API_RETRIES - 1:
+                    print(f"  {model} attempt {attempt + 1} failed (503). Retrying in {API_RETRY_DELAY}s...")
+                    time.sleep(API_RETRY_DELAY)
+                elif is_overloaded:
+                    print(f"  {model} exhausted retries. Trying fallback...")
+                    break
+                else:
+                    raise
+        else:
+            continue
+        break
+    else:
+        raise RuntimeError("All models and retries exhausted")
 
     # If AI returned multiple variants, take the first clean block
     if "**Вариант" in text or "Вариант 1" in text:

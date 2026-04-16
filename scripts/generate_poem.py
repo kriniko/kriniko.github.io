@@ -17,9 +17,37 @@ IMAGES_DIR = REPO_ROOT / "static" / "images"
 QUEUE_FILE = REPO_ROOT / "content" / "topics-queue.txt"
 HISTORY_FILE = REPO_ROOT / "content" / "topics-history.json"
 
-MODEL = "gemini-2.5-flash"
+MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
+MAX_API_RETRIES = 3
+API_RETRY_DELAY = 30  # seconds
 REVIEW_THRESHOLD = 7
 MAX_REWRITES = 2
+
+
+def call_gemini(client, prompt, system=None):
+    """Call Gemini with retry logic and model fallback."""
+    contents = prompt
+    if system:
+        contents = f"{system}\n\n{prompt}"
+
+    for model in MODELS:
+        for attempt in range(MAX_API_RETRIES):
+            try:
+                response = client.models.generate_content(model=model, contents=contents)
+                return response.text.strip()
+            except Exception as e:
+                err_str = str(e)
+                is_overloaded = any(k in err_str for k in ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED"]) or "overloaded" in err_str.lower()
+                if is_overloaded and attempt < MAX_API_RETRIES - 1:
+                    print(f"  {model} attempt {attempt + 1} failed (503). Retrying in {API_RETRY_DELAY}s...")
+                    time.sleep(API_RETRY_DELAY)
+                elif is_overloaded:
+                    print(f"  {model} exhausted retries. Trying fallback model...")
+                    break  # try next model
+                else:
+                    raise  # non-503 error, don't retry
+
+    raise RuntimeError("All models and retries exhausted")
 
 INSTITUTIONS = [
     "НАП", "НОИ", "КАТ", "ТЕЛК", "община", "митница", "нотариус",
@@ -101,9 +129,7 @@ def pick_topic(client, history):
 
     # AI picks a topic
     used_topics = [h["topic"] for h in history]
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=f"""Избери ЕДНА конкретна тема за сатиричен фейлетон за българската бюрокрация.
+    result = call_gemini(client, f"""Избери ЕДНА конкретна тема за сатиричен фейлетон за българската бюрокрация.
 
 Темата трябва да е конкретна ситуация (не просто институция), например:
 - "Как се получава удостоверение за наследници когато наследниците са в чужбина"
@@ -114,9 +140,8 @@ def pick_topic(client, history):
 
 Институции за вдъхновение: {', '.join(INSTITUTIONS)}
 
-Върни САМО темата, нищо друго. Една тема, един ред.""",
-    )
-    return response.text.strip().strip('"')
+Върни САМО темата, нищо друго. Една тема, един ред.""")
+    return result.strip('"')
 
 
 def generate_poem(client, topic, history, feedback=None):
@@ -133,8 +158,7 @@ def generate_poem(client, topic, history, feedback=None):
     if feedback:
         prompt += f"\n\nОБРАТНА ВРЪЗКА ОТ РЕДАКТОР (вземи предвид): {feedback}"
 
-    response = client.models.generate_content(model=MODEL, contents=prompt)
-    return response.text.strip()
+    return call_gemini(client, prompt)
 
 
 def review_and_score(client, title, poem_body, topic, history):
@@ -144,8 +168,7 @@ def review_and_score(client, title, poem_body, topic, history):
     for attempt in range(1 + MAX_REWRITES):
         review_prompt = REVIEW_PROMPT_TEMPLATE.format(title=title, poem_body=poem_body)
 
-        response = client.models.generate_content(model=MODEL, contents=review_prompt)
-        review_text = response.text.strip()
+        review_text = call_gemini(client, review_prompt)
 
         # Extract JSON from possible markdown code block
         if "```" in review_text:
@@ -181,9 +204,7 @@ def review_and_score(client, title, poem_body, topic, history):
 
 
 def generate_metadata(client, title, poem_text):
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=f"""За тази българска сатирична статия, генерирай метаданни в JSON формат:
+    text = call_gemini(client, f"""За тази българска сатирична статия, генерирай метаданни в JSON формат:
 
 ЗАГЛАВИЕ: {title}
 ТЕКСТ (първи 200 символа): {poem_text[:200]}
@@ -196,9 +217,7 @@ def generate_metadata(client, title, poem_text):
   "image_prompt": "Detailed English prompt for black-and-white ink cartoon illustration in minimalist satirical style with bold lines and exaggerated figures, illustrating this specific story. No signatures or artist names anywhere on the image. Any text in the image must be in Bulgarian.",
   "keywords": ["ключова1", "ключова2", "ключова3"],
   "teaser": "кратък тийзър за Facebook пост — 2-3 изречения, закачливи, с линк placeholder {{link}}"
-}}""",
-    )
-    text = response.text.strip()
+}}""")
     # Extract JSON from possible markdown code block
     if "```" in text:
         text = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL).group(1)
