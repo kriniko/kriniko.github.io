@@ -55,16 +55,6 @@ jobs:
           Co-Authored-By: Гише ∞ Bot <noreply@gisheto.com>"
           git push
 
-      - name: Wait for deploy
-        run: sleep 180
-
-      - name: Post to Buffer
-        env:
-          BUFFER_API_KEY: ${{ secrets.BUFFERAPI }}
-          BUFFER_FACEBOOK_CHANNEL_ID: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_ID }}
-          BUFFER_FACEBOOK_CHANNEL_NAME: ${{ secrets.BUFFER_FACEBOOK_CHANNEL_NAME }}
-        run: python scripts/post_to_buffer.py article
-
       - name: Notify on failure
         if: failure()
         run: |

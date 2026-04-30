@@ -214,7 +214,7 @@ def generate_metadata(client, title, poem_text):
   "description": "кратко описание до 160 символа на български",
   "slug": "slug-na-latinica-bez-specialni-znaci",
   "image_alt": "описание на илюстрация на български",
-  "image_prompt": "Detailed English prompt for black-and-white ink cartoon illustration in minimalist satirical style with bold lines and exaggerated figures, illustrating this specific story. No signatures or artist names anywhere on the image. Any text in the image must be in Bulgarian.",
+  "image_prompt": "Detailed English prompt for an illustration in the style of Bulgarian animator Donyo Donev (Доньо Донев) — flat 2D cartoon, hand-drawn ink lines, limited muted earth-tone palette (ochre, faded red, cream, charcoal), exaggerated long noses, big ears, droopy eyes, thin spindly limbs, retro 1970s socialist-era look, slightly absurd and melancholic atmosphere, simple geometric backgrounds. Illustrate this specific story. NO TEXT, NO SIGNATURES, NO ARTIST NAMES, NO WATERMARKS, NO LETTERS anywhere on the image. Do not write 'Donyo Donev' or any name. Pure illustration only.",
   "keywords": ["ключова1", "ключова2", "ключова3"],
   "teaser": "кратък тийзър за Facebook пост — 2-3 изречения, закачливи, с линк placeholder {{link}}"
 }}""")
