@@ -9,7 +9,7 @@ import time
 from datetime import date
 from pathlib import Path
 from google import genai
-import requests
+from google.genai import types
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = REPO_ROOT / "content" / "article"
@@ -244,121 +244,42 @@ keywords:
     return slug, filepath
 
 
-def create_canva_image(slug, title, image_prompt=""):
-    """Create article cover image using Canva autofill API.
+def create_gemini_image(client, slug, image_prompt):
+    """Generate Donyo Donev style cover via Gemini 2.5 Flash Image.
 
-    Requires env vars:
-        CANVA_API_KEY      – Canva Connect API access token
-        CANVA_TEMPLATE_ID  – Brand-template ID in Canva (e.g. DAF…)
-
-    The brand template must have at least one text data field named "title".
-    An optional "subtitle" text field will receive the image_prompt if present.
-
-    Returns True on success, False if Canva is unavailable or the call fails.
+    Returns True on success, False on failure (caller falls back to placeholder).
     """
-    # Canva brand-template subtitle field character limit
-    _MAX_SUBTITLE_LEN = 200
-    # Polling: up to 30 attempts × 3 s = 90 s per job
-    _POLL_ATTEMPTS = 30
-    _POLL_INTERVAL = 3  # seconds
-
-    api_key = os.environ.get("CANVA_API_KEY")
-    template_id = os.environ.get("CANVA_TEMPLATE_ID")
-
-    if not api_key or not template_id:
-        print("Canva keys not set — skipping Canva, using placeholder image")
+    if not image_prompt:
         return False
 
-    base_url = "https://api.canva.com/rest/v1"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
-    # Build autofill data; only include fields the template actually has
-    autofill_data = {"title": {"type": "text", "text": title}}
-    if image_prompt:
-        autofill_data["subtitle"] = {"type": "text", "text": image_prompt[:_MAX_SUBTITLE_LEN]}
-
     try:
-        # Step 1: Trigger autofill job
-        resp = requests.post(
-            f"{base_url}/brand-templates/{template_id}/autofills",
-            headers=headers,
-            json={"title": f"Cover - {slug}", "data": autofill_data},
-            timeout=30,
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=image_prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"],
+                image_config=types.ImageConfig(aspect_ratio="16:9"),
+                candidate_count=1,
+            ),
         )
-        resp.raise_for_status()
-        autofill_job_id = resp.json()["job"]["id"]
-        print(f"Canva autofill job: {autofill_job_id}")
 
-        # Step 2: Poll autofill completion (up to ~90 s)
-        design_id = None
-        for _ in range(_POLL_ATTEMPTS):
-            time.sleep(_POLL_INTERVAL)
-            resp = requests.get(
-                f"{base_url}/brand-templates/{template_id}/autofills/{autofill_job_id}",
-                headers=headers,
-                timeout=15,
-            )
-            resp.raise_for_status()
-            job = resp.json()["job"]
-            if job["status"] == "success":
-                design_id = job["result"]["design"]["id"]
-                break
-            if job["status"] == "failed":
-                print(f"Canva autofill failed: {job}")
-                return False
+        for part in response.candidates[0].content.parts:
+            if part.inline_data and part.inline_data.data:
+                from PIL import Image
+                import io
+                img = Image.open(io.BytesIO(part.inline_data.data))
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                dest = IMAGES_DIR / f"{slug}.jpeg"
+                img.save(dest, "JPEG", quality=92)
+                print(f"Gemini image saved: {dest}")
+                return True
 
-        if not design_id:
-            print("Canva autofill timed out")
-            return False
-
-        print(f"Canva design: {design_id}")
-
-        # Step 3: Request JPEG export
-        resp = requests.post(
-            f"{base_url}/exports",
-            headers=headers,
-            json={"design_id": design_id, "format": "jpg", "export_quality": "pro"},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        export_job_id = resp.json()["job"]["id"]
-        print(f"Canva export job: {export_job_id}")
-
-        # Step 4: Poll export completion (up to ~90 s)
-        export_url = None
-        for _ in range(_POLL_ATTEMPTS):
-            time.sleep(_POLL_INTERVAL)
-            resp = requests.get(
-                f"{base_url}/exports/{export_job_id}",
-                headers=headers,
-                timeout=15,
-            )
-            resp.raise_for_status()
-            job = resp.json()["job"]
-            if job["status"] == "success":
-                export_url = job["result"]["urls"][0]
-                break
-            if job["status"] == "failed":
-                print(f"Canva export failed: {job}")
-                return False
-
-        if not export_url:
-            print("Canva export timed out")
-            return False
-
-        # Step 5: Download and save image
-        img_resp = requests.get(export_url, timeout=60)
-        img_resp.raise_for_status()
-        dest = IMAGES_DIR / f"{slug}.jpeg"
-        dest.write_bytes(img_resp.content)
-        print(f"Canva image saved: {dest}")
-        return True
+        print("Gemini returned no image part")
+        return False
 
     except Exception as exc:  # pylint: disable=broad-except
-        print(f"Canva error ({type(exc).__name__}): {exc}")
+        print(f"Gemini image error ({type(exc).__name__}): {exc}")
         return False
 
 
@@ -443,8 +364,8 @@ def main():
     slug, filepath = create_article(title, poem_body, metadata, today)
     print(f"Article: {filepath}")
 
-    # 6. Create cover image via Canva, falling back to a styled placeholder
-    if not create_canva_image(slug, title, metadata.get("image_prompt", "")):
+    # 6. Create cover image via Gemini (Donyo Donev style), falling back to placeholder
+    if not create_gemini_image(client, slug, metadata.get("image_prompt", "")):
         create_placeholder_image(slug, title)
 
     # 7. Update history

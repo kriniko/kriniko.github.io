@@ -38,8 +38,6 @@ jobs:
       - name: Generate poem
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINIAPI }}
-          CANVA_API_KEY: ${{ secrets.CANVA_API_KEY }}
-          CANVA_TEMPLATE_ID: ${{ secrets.CANVA_TEMPLATE_ID }}
         run: python scripts/generate_poem.py
 
       - name: Commit and push
