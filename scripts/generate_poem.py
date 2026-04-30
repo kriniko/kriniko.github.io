@@ -9,7 +9,6 @@ import time
 from datetime import date
 from pathlib import Path
 from google import genai
-from google.genai import types
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = REPO_ROOT / "content" / "article"
@@ -22,6 +21,16 @@ MAX_API_RETRIES = 3
 API_RETRY_DELAY = 30  # seconds
 REVIEW_THRESHOLD = 7
 MAX_REWRITES = 2
+
+
+def clean_title(raw):
+    """Strip leading '#', surrounding markdown bold/italic, and quotes."""
+    t = raw.strip().lstrip("#").strip()
+    while t.startswith(("**", "__")) and t.endswith(("**", "__")) and len(t) > 4:
+        t = t[2:-2].strip()
+    while t.startswith(("*", "_")) and t.endswith(("*", "_")) and len(t) > 2:
+        t = t[1:-1].strip()
+    return t.strip('"').strip("'").strip()
 
 
 def call_gemini(client, prompt, system=None):
@@ -206,7 +215,7 @@ def review_and_score(client, title, poem_body, topic, history):
             print(f"  Rewriting with feedback: {review['feedback']}")
             rewrite_full = generate_poem(client, topic, history, feedback=review["feedback"])
             lines = rewrite_full.split("\n", 1)
-            title = lines[0].strip().strip("#").strip()
+            title = clean_title(lines[0])
             poem_body = lines[1].strip() if len(lines) > 1 else rewrite_full
 
     return best
@@ -223,7 +232,7 @@ def generate_metadata(client, title, poem_text):
   "description": "кратко описание до 160 символа на български",
   "slug": "slug-na-latinica-bez-specialni-znaci",
   "image_alt": "описание на илюстрация на български",
-  "image_prompt": "Detailed English prompt for an illustration in the style of Bulgarian animator Donyo Donev (Доньо Донев) — flat 2D cartoon, hand-drawn ink lines, limited muted earth-tone palette (ochre, faded red, cream, charcoal), exaggerated long noses, big ears, droopy eyes, thin spindly limbs, retro 1970s socialist-era look, slightly absurd and melancholic atmosphere, simple geometric backgrounds. Illustrate this specific story. NO TEXT, NO SIGNATURES, NO ARTIST NAMES, NO WATERMARKS, NO LETTERS anywhere on the image. Do not write 'Donyo Donev' or any name. Pure illustration only.",
+  "image_prompt": "Detailed English prompt for a black-and-white ink political cartoon in the tradition of Bulgarian satirical illustrators (Donyo Donev / Иван Газдов / Райко Алексиев). Pen-and-ink line work, fine cross-hatching for shading, single-panel composition on plain white background, exaggerated weary faces (long noses, big ears, drooping eyes), hunched bureaucrats, dense queues, mountains of paperwork or empty gishe windows, slightly absurd and melancholic atmosphere. Illustrate this specific story scene. STRICTLY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO SIGNATURES, NO ARTIST NAMES, NO WATERMARKS, NO LOGOS, NO ENGLISH, NO 'reallygreatsite.com' or any URL. Pure illustration only — image must contain zero readable characters of any alphabet.",
   "keywords": ["ключова1", "ключова2", "ключова3"],
   "teaser": "кратък тийзър за Facebook пост — 2-3 изречения, закачливи, с линк placeholder {{link}}"
 }}""")
@@ -253,43 +262,40 @@ keywords:
     return slug, filepath
 
 
-def create_gemini_image(client, slug, image_prompt):
-    """Generate Donyo Donev style cover via Gemini 2.5 Flash Image.
+def create_pollinations_image(slug, image_prompt):
+    """Generate cover image via Pollinations.ai (free, no API key).
 
     Returns True on success, False on failure (caller falls back to placeholder).
     """
     if not image_prompt:
         return False
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
-            contents=image_prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-                image_config=types.ImageConfig(aspect_ratio="16:9"),
-                candidate_count=1,
-            ),
-        )
+    import urllib.parse
+    import urllib.request
 
-        for part in response.candidates[0].content.parts:
-            if part.inline_data and part.inline_data.data:
-                from PIL import Image
-                import io
-                img = Image.open(io.BytesIO(part.inline_data.data))
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-                dest = IMAGES_DIR / f"{slug}.jpeg"
-                img.save(dest, "JPEG", quality=92)
-                print(f"Gemini image saved: {dest}")
-                return True
+    seed = abs(hash(slug)) % 99999
+    url = (
+        "https://image.pollinations.ai/prompt/"
+        + urllib.parse.quote(image_prompt)
+        + f"?width=900&height=1200&nologo=true&model=flux&seed={seed}"
+    )
 
-        print("Gemini returned no image part")
-        return False
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=180) as r:
+                data = r.read()
+            if len(data) < 5000:
+                raise RuntimeError(f"image too small ({len(data)} bytes)")
+            dest = IMAGES_DIR / f"{slug}.jpeg"
+            dest.write_bytes(data)
+            print(f"Pollinations image saved: {dest} ({len(data)} bytes)")
+            return True
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"Pollinations attempt {attempt + 1} failed ({type(exc).__name__}): {exc}")
+            time.sleep(5 * (attempt + 1))
 
-    except Exception as exc:  # pylint: disable=broad-except
-        print(f"Gemini image error ({type(exc).__name__}): {exc}")
-        return False
+    return False
 
 
 def create_placeholder_image(slug, title):
@@ -373,8 +379,8 @@ def main():
     slug, filepath = create_article(title, poem_body, metadata, today)
     print(f"Article: {filepath}")
 
-    # 6. Create cover image via Gemini (Donyo Donev style), falling back to placeholder
-    if not create_gemini_image(client, slug, metadata.get("image_prompt", "")):
+    # 6. Create cover image via Pollinations.ai, falling back to placeholder
+    if not create_pollinations_image(slug, metadata.get("image_prompt", "")):
         create_placeholder_image(slug, title)
 
     # 7. Update history
