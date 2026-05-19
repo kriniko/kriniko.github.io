@@ -13,12 +13,12 @@ Flow:
 import argparse
 import json
 import os
-import random
 import sys
 import time
 from datetime import date
 from pathlib import Path
 
+import requests
 from google import genai
 
 from categories import CATEGORIES, pick_category, pick_template
@@ -38,7 +38,6 @@ MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
 MAX_API_RETRIES = 3
 API_RETRY_DELAY = 30
 SOCIAL_HISTORY_FILE = REPO_ROOT / "content" / "social-history.json"
-CONTENT_DIR = REPO_ROOT / "content" / "article"
 SITE_BASE_URL = "https://gisheto.com"
 
 # Content calendar: 27 rotating post types based on the content plan
@@ -206,11 +205,11 @@ D) Всичко горепосочено!"
     },
     {
         "type": "old_article_hook",
-        "name": "Закачка за стара статия",
-        "prompt": """На базата на тази статия, напиши кратък закачлив Facebook пост (2-3 изречения)
-който да привлече хората да я прочетат. Използвай различен ъгъл — въпрос, провокация, или "а вие опитвали ли сте..."
-Завърши с {{link}}
+        "name": "Закачка за бюрократична тема",
+        "prompt": """Напиши кратък закачлив Facebook пост (2-3 изречения) на тема бюрократична нелепост.
+Използвай различен ъгъл — въпрос, провокация, или "а вие опитвали ли сте..."
 Пиши на БЪЛГАРСКИ. Върни САМО текста на поста.""",
+        "hashtags": "#БюрократиченХумор #Гише #Споделяемо",
     },
     {
         "type": "theme_song",
@@ -422,7 +421,7 @@ def make_visual(category_key, template_type, chosen_text, scene_prompt):
         try:
             url = visuals.fetch_gif(scene_prompt)
             return url, None
-        except RuntimeError as e:
+        except (RuntimeError, requests.RequestException) as e:
             print(f"  GIF fetch failed ({e}); falling back to illustration")
             path = visuals.make_illustration(scene_prompt, slug=slug)
             return f"{SITE_BASE_URL}/images/social/{path.name}", path
