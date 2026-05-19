@@ -40,6 +40,14 @@ def test_parse_scores_malformed_returns_none():
     assert parse_scores("not json at all") is None
 
 
+def test_parse_scores_with_chatter_prefix():
+    raw = 'Ето оценките: [{"laugh":7,"share":6},{"laugh":4,"share":4},{"laugh":9,"share":8}]'
+    out = parse_scores(raw)
+    assert out is not None
+    assert len(out) == 3
+    assert out[2]["laugh"] == 9
+
+
 def test_pick_best_returns_highest_sum():
     variants = ["a", "b", "c"]
     scores = [{"laugh": 5, "share": 5}, {"laugh": 9, "share": 8}, {"laugh": 6, "share": 6}]

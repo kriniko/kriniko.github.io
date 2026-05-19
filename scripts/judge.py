@@ -53,6 +53,9 @@ def parse_variants(raw):
 def parse_scores(raw):
     fence = re.search(r"```(?:json)?\s*(.*?)```", raw, flags=re.S)
     payload = fence.group(1) if fence else raw
+    array = re.search(r"\[.*\]", payload, flags=re.S)
+    if array:
+        payload = array.group(0)
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, ValueError):
