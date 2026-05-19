@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
-"""Generate social posts based on 30-day content calendar for @gishebezkrainost."""
+"""Generate one Facebook post per run.
 
+Flow:
+  1. pick category (round-robin) + template (avoid recent)
+  2. Gemini: 3 text variants
+  3. Gemini: judge scores -> pick best (regen once if max < THRESHOLD)
+  4. Gemini: 1-sentence English scene prompt for visual
+  5. dispatch visual by category.visual_type
+  6. write social-output.json with {text, image_url}
+"""
+
+import argparse
 import json
 import os
 import random
@@ -8,7 +18,20 @@ import sys
 import time
 from datetime import date
 from pathlib import Path
+
 from google import genai
+
+from categories import CATEGORIES, pick_category, pick_template
+from judge import (
+    GENERATION_PREAMBLE,
+    JUDGE_PROMPT,
+    REGEN_NOTE,
+    THRESHOLD,
+    parse_scores,
+    parse_variants,
+    pick_best,
+)
+import visuals
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
@@ -16,8 +39,9 @@ MAX_API_RETRIES = 3
 API_RETRY_DELAY = 30
 SOCIAL_HISTORY_FILE = REPO_ROOT / "content" / "social-history.json"
 CONTENT_DIR = REPO_ROOT / "content" / "article"
+SITE_BASE_URL = "https://gisheto.com"
 
-# Content calendar: 30 rotating post types based on the content plan
+# Content calendar: 27 rotating post types based on the content plan
 # Each has a type, a Bulgarian prompt, and suggested hashtags
 POST_TEMPLATES = [
     {
@@ -318,158 +342,186 @@ D) Всичко горепосочено!"
 ]
 
 
-def load_social_history():
+def load_history():
     if SOCIAL_HISTORY_FILE.exists():
         return json.loads(SOCIAL_HISTORY_FILE.read_text(encoding="utf-8"))
     return []
 
 
-def save_social_history(history):
+def save_history(history):
     SOCIAL_HISTORY_FILE.write_text(
-        json.dumps(history, indent=2, ensure_ascii=False),
-        encoding="utf-8",
+        json.dumps(history, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
 
-def load_articles():
-    """Load all published articles for old_article_hook posts."""
-    articles = []
-    for f in CONTENT_DIR.glob("*.md"):
-        if f.name == "_index.md":
-            continue
-        text = f.read_text(encoding="utf-8")
-        title_match = None
-        for line in text.splitlines():
-            if line.startswith("title:"):
-                title_match = line.split(":", 1)[1].strip().strip('"')
-                break
-        slug = f.stem
-        articles.append({"title": title_match or slug, "slug": slug})
-    return articles
-
-
-def pick_template(social_history):
-    """Pick a post template, avoiding recent repeats."""
-    recent_types = [h["type"] for h in social_history[-12:]]
-    available = [t for t in POST_TEMPLATES if t["type"] not in recent_types]
-    if not available:
-        available = POST_TEMPLATES
-    return random.choice(available)
-
-
-def generate_social_post(client, social_history):
-    """Generate a social post based on the content calendar."""
-    template = pick_template(social_history)
-    prompt = template["prompt"]
-
-    # For old_article_hook, pick a random article
-    article_context = None
-    if template["type"] == "old_article_hook":
-        articles = load_articles()
-        if articles:
-            article = random.choice(articles)
-            article_file = CONTENT_DIR / f"{article['slug']}.md"
-            article_text = article_file.read_text(encoding="utf-8")
-            parts = article_text.split("---", 2)
-            body = parts[2][:500] if len(parts) > 2 else ""
-            prompt += f"\n\nСТАТИЯ: {article['title']}\nОТКЪС: {body}"
-            article_context = {
-                "slug": article["slug"],
-                "title": article["title"],
-                "url": f"https://gisheto.com/article/{article['slug']}/",
-                "image_url": f"https://gisheto.com/images/{article['slug']}.jpeg",
-            }
-
-    full_prompt = prompt + "\n\nВАЖНО: Върни САМО ЕДИН пост, готов за публикуване. Без варианти, без номерация, без 'Вариант 1'."
-
-    # Call with retry and model fallback
+def gemini_call(client, prompt):
+    """Single Gemini call with retry + model fallback."""
     for model in MODELS:
         for attempt in range(MAX_API_RETRIES):
             try:
-                response = client.models.generate_content(model=model, contents=full_prompt)
-                text = response.text.strip()
-                break
+                resp = client.models.generate_content(model=model, contents=prompt)
+                return resp.text.strip()
             except Exception as e:
-                err_str = str(e)
-                is_overloaded = any(k in err_str for k in ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED"])
-                if is_overloaded and attempt < MAX_API_RETRIES - 1:
-                    print(f"  {model} attempt {attempt + 1} failed (503). Retrying in {API_RETRY_DELAY}s...")
+                err = str(e)
+                overloaded = any(
+                    k in err for k in ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED"]
+                )
+                if overloaded and attempt < MAX_API_RETRIES - 1:
+                    print(f"  {model} attempt {attempt + 1} overloaded, retry in {API_RETRY_DELAY}s")
                     time.sleep(API_RETRY_DELAY)
-                elif is_overloaded:
-                    print(f"  {model} exhausted retries. Trying fallback...")
+                elif overloaded:
+                    print(f"  {model} exhausted, trying fallback")
                     break
                 else:
                     raise
-        else:
-            continue
-        break
+    raise RuntimeError("All models exhausted")
+
+
+def find_template(template_type):
+    for t in POST_TEMPLATES:
+        if t["type"] == template_type:
+            return t
+    raise KeyError(template_type)
+
+
+def generate_variants(client, template, regen=False):
+    task = template["prompt"]
+    full = GENERATION_PREAMBLE.format(task=task) + (REGEN_NOTE if regen else "")
+    raw = gemini_call(client, full)
+    return parse_variants(raw)
+
+
+def score_variants(client, variants):
+    prompt = JUDGE_PROMPT.format(v1=variants[0], v2=variants[1], v3=variants[2])
+    raw = gemini_call(client, prompt)
+    return parse_scores(raw)
+
+
+def build_scene_prompt(client, post_text):
+    """1-sentence English visual description used as Pollinations/Tenor input."""
+    prompt = f"""You will be given a Bulgarian satirical Facebook post about bureaucracy.
+Return ONE short English sentence (max 15 words) describing a visual scene for it.
+No commentary. No labels. Just the sentence.
+
+Post:
+{post_text}"""
+    return gemini_call(client, prompt).strip().strip('".')
+
+
+def slugify_for_file(template_type):
+    today = date.today().isoformat()
+    return f"{today}-{template_type}"
+
+
+def make_visual(category_key, template_type, chosen_text, scene_prompt):
+    """Dispatch by category visual_type. Returns (image_url, local_path_or_none)."""
+    visual_type = CATEGORIES[category_key]["visual_type"]
+    slug = slugify_for_file(template_type)
+
+    if visual_type == "gif":
+        try:
+            url = visuals.fetch_gif(scene_prompt)
+            return url, None
+        except RuntimeError as e:
+            print(f"  GIF fetch failed ({e}); falling back to illustration")
+            path = visuals.make_illustration(scene_prompt, slug=slug)
+            return f"{SITE_BASE_URL}/images/social/{path.name}", path
+
+    if visual_type == "meme":
+        top, bottom = split_meme_text(chosen_text)
+        path = visuals.make_meme(top, bottom, scene_prompt, slug=slug)
+    elif visual_type == "infographic":
+        headline, body = split_infographic_text(chosen_text)
+        path = visuals.make_infographic(headline, body, scene_prompt, slug=slug)
     else:
-        raise RuntimeError("All models and retries exhausted")
+        path = visuals.make_illustration(scene_prompt, slug=slug)
 
-    # If AI returned multiple variants, take the first clean block
-    if "**Вариант" in text or "Вариант 1" in text:
-        blocks = [b.strip() for b in text.split("\n\n") if b.strip() and not b.strip().startswith("Ето")]
-        for block in blocks:
-            clean = block.lstrip("*").strip()
-            if clean and not clean.startswith("Вариант") and len(clean) > 20:
-                text = clean
-                break
-
-    # Add hashtags from template
-    hashtags = template.get("hashtags", "#гише #бюрокрация #България #сатира")
-    if "#" not in text:
-        text += f"\n\n{hashtags}"
-
-    # Replace link placeholder
-    if article_context and "{link}" in text:
-        text = text.replace("{link}", article_context["url"])
-
-    return {
-        "type": template["type"],
-        "name": template["name"],
-        "text": text,
-        "article": article_context,
-    }
+    return f"{SITE_BASE_URL}/images/social/{path.name}", path
 
 
-def main():
+def split_meme_text(text):
+    """Crude split: first line up, rest down. If single line, put it all bottom."""
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    lines = [l for l in lines if not l.startswith("#")]
+    if not lines:
+        return "", text
+    if len(lines) == 1:
+        return "", lines[0]
+    return lines[0], " ".join(lines[1:])
+
+
+def split_infographic_text(text):
+    """First line headline, rest body."""
+    lines = [l.strip() for l in text.splitlines() if l.strip() and not l.startswith("#")]
+    if not lines:
+        return "ЗНАЕТЕ ЛИ", text
+    return lines[0], " ".join(lines[1:]) if len(lines) > 1 else lines[0]
+
+
+def run(dry_run=False):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("ERROR: GEMINI_API_KEY not set")
         sys.exit(1)
-
     client = genai.Client(api_key=api_key)
-    social_history = load_social_history()
 
-    post = generate_social_post(client, social_history)
-    print(f"Type: {post['type']} ({post['name']})")
-    print(f"Text: {post['text']}")
+    history = load_history()
+    category_key = pick_category(history)
+    template_type = pick_template(category_key, history)
+    template = find_template(template_type)
 
-    # Save to output for Buffer posting
+    print(f"Category: {category_key}  Template: {template_type}")
+
+    variants = generate_variants(client, template)
+    scores = score_variants(client, variants)
+    best_text, total = pick_best(variants, scores)
+    print(f"  best score: {total}")
+
+    if total < THRESHOLD:
+        print("  below threshold, regenerating once")
+        variants = generate_variants(client, template, regen=True)
+        scores = score_variants(client, variants)
+        best_text, total = pick_best(variants, scores)
+        print(f"  regen score: {total}")
+
+    hashtags = template.get("hashtags", "#гише #бюрокрация")
+    if "#" not in best_text:
+        best_text = f"{best_text}\n\n{hashtags}"
+
+    scene_prompt = build_scene_prompt(client, best_text)
+    print(f"  scene: {scene_prompt}")
+
+    image_url, local_path = make_visual(category_key, template_type, best_text, scene_prompt)
+    print(f"  visual: {image_url}")
+
     output = {
-        "type": post["type"],
-        "text": post["text"],
+        "type": template_type,
+        "category": category_key,
+        "text": best_text,
+        "image_url": image_url,
     }
-    if post.get("article"):
-        output["article_url"] = post["article"]["url"]
-        output["image_url"] = post["article"]["image_url"]
+    out_file = REPO_ROOT / "scripts" / "social-output.json"
+    out_file.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    output_file = REPO_ROOT / "scripts" / "social-output.json"
-    output_file.write_text(
-        json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-    # Update history
-    social_history.append({
-        "type": post["type"],
-        "name": post["name"],
+    history.append({
+        "type": template_type,
+        "category": category_key,
         "date": date.today().isoformat(),
-        "preview": post["text"][:100],
+        "score": total,
+        "preview": best_text[:100],
     })
-    social_history = social_history[-50:]
-    save_social_history(social_history)
+    history = history[-50:]
+    save_history(history)
+    print(f"output: {out_file}")
+    if dry_run:
+        print("DRY RUN: skipping Buffer step (post_to_buffer.py not invoked here anyway)")
 
-    print(f"\nOutput saved to: {output_file}")
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    run(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
