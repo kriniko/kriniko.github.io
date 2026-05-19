@@ -33,6 +33,7 @@ jobs:
       - name: Generate social post
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINIAPI }}
+          TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
         run: python scripts/generate_social.py
 
       - name: Post to Buffer
@@ -47,7 +48,7 @@ jobs:
           git config user.name "Kristina"
           git config user.email "kriniko@gmail.com"
           git remote set-url origin https://x-access-token:${{ secrets.GHP }}@github.com/kriniko/kriniko.github.io.git
-          git add content/social-history.json
+          git add content/social-history.json static/images/social/
           git diff --cached --quiet || git commit -m "chore: update social post history - $(date +%Y-%m-%d)"
           git push
 
