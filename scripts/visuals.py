@@ -71,3 +71,64 @@ def make_illustration(scene_prompt, out_dir=None, slug=None):
     out_path = out_dir / f"{slug}.jpg"
     out_path.write_bytes(data)
     return out_path
+
+
+def _wrap_text(text, max_width_chars=20):
+    words = text.split()
+    lines = []
+    current = ""
+    for w in words:
+        candidate = (current + " " + w).strip()
+        if len(candidate) <= max_width_chars:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = w
+    if current:
+        lines.append(current)
+    return lines or [text]
+
+
+def _draw_impact_text(draw, text, image_w, y_start, font_size, position):
+    """Draw Cyrillic Impact-style centered text with black stroke.
+
+    position: 'top' (y_start = 40) or 'bottom' (y_start = image_h - lines*lh - 40).
+    """
+    font = ImageFont.truetype(str(FONT_PATH), font_size)
+    lines = _wrap_text(text.upper(), max_width_chars=20)
+    line_height = int(font_size * 1.15)
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font, stroke_width=4)
+        line_w = bbox[2] - bbox[0]
+        x = (image_w - line_w) // 2
+        y = y_start + i * line_height
+        draw.text(
+            (x, y), line, font=font, fill="white",
+            stroke_width=4, stroke_fill="black",
+        )
+    return len(lines) * line_height
+
+
+def make_meme(top_text, bottom_text, scene_prompt, out_dir=None, slug=None):
+    """Pollinations illustration + Impact-style top/bottom Cyrillic overlay."""
+    out_dir = Path(out_dir) if out_dir else SOCIAL_IMG_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    slug = slug or _slugify(top_text + "-" + bottom_text)
+    url = pollinations_url(scene_prompt)
+    from io import BytesIO
+    data = _fetch_with_retry(url)
+    img = Image.open(BytesIO(data)).convert("RGB")
+    w, h = img.size
+    draw = ImageDraw.Draw(img)
+    font_size = int(w * 0.06)
+    if top_text:
+        _draw_impact_text(draw, top_text, w, 40, font_size, "top")
+    if bottom_text:
+        bottom_lines = _wrap_text(bottom_text.upper(), max_width_chars=20)
+        line_height = int(font_size * 1.15)
+        y_start = h - len(bottom_lines) * line_height - 40
+        _draw_impact_text(draw, bottom_text, w, y_start, font_size, "bottom")
+    out_path = out_dir / f"{slug}.jpg"
+    img.save(out_path, format="JPEG", quality=90)
+    return out_path
