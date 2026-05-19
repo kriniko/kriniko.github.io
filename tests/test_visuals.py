@@ -73,3 +73,41 @@ def test_make_infographic_writes_jpg(tmp_path):
             slug="info-test",
         )
     assert out.exists()
+
+
+def test_fetch_gif_returns_url():
+    fake_resp = {
+        "results": [
+            {"media_formats": {"gif": {"url": "https://media.tenor.com/abc.gif"}}}
+        ]
+    }
+    with patch("visuals.requests.get") as mock_get, \
+         patch.dict("os.environ", {"TENOR_API_KEY": "k"}):
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: fake_resp)
+        url = visuals.fetch_gif("frustrated office")
+    assert url == "https://media.tenor.com/abc.gif"
+
+
+def test_fetch_gif_empty_falls_back_to_simpler_keyword():
+    empty = {"results": []}
+    hit = {"results": [{"media_formats": {"gif": {"url": "https://media.tenor.com/x.gif"}}}]}
+    with patch("visuals.requests.get") as mock_get, \
+         patch.dict("os.environ", {"TENOR_API_KEY": "k"}):
+        mock_get.side_effect = [
+            MagicMock(status_code=200, json=lambda: empty),
+            MagicMock(status_code=200, json=lambda: hit),
+        ]
+        url = visuals.fetch_gif("very specific phrase that does not exist")
+    assert url == "https://media.tenor.com/x.gif"
+
+
+def test_fetch_gif_no_results_raises():
+    empty = {"results": []}
+    with patch("visuals.requests.get") as mock_get, \
+         patch.dict("os.environ", {"TENOR_API_KEY": "k"}):
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: empty)
+        try:
+            visuals.fetch_gif("xxx")
+            assert False, "expected RuntimeError"
+        except RuntimeError:
+            pass

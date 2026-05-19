@@ -175,3 +175,40 @@ def make_infographic(headline, body, scene_prompt, out_dir=None, slug=None):
     out_path = out_dir / f"{slug}.jpg"
     img.save(out_path, format="JPEG", quality=90)
     return out_path
+
+
+def fetch_gif(keywords):
+    """Search Tenor for a GIF matching `keywords` (English). Returns direct URL.
+
+    If first search returns no results, retry with the first word only.
+    Raises RuntimeError if still empty or API key missing.
+    """
+    api_key = os.environ.get("TENOR_API_KEY")
+    if not api_key:
+        raise RuntimeError("TENOR_API_KEY not set")
+
+    def _search(q):
+        resp = requests.get(
+            TENOR_BASE,
+            params={
+                "q": q,
+                "key": api_key,
+                "client_key": "gisheto",
+                "limit": 10,
+                "media_filter": "gif",
+                "contentfilter": "medium",
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json().get("results", [])
+
+    results = _search(keywords)
+    if not results:
+        simpler = keywords.split()[0] if keywords.split() else keywords
+        if simpler != keywords:
+            results = _search(simpler)
+    if not results:
+        raise RuntimeError(f"Tenor: no GIF for '{keywords}'")
+
+    return results[0]["media_formats"]["gif"]["url"]
