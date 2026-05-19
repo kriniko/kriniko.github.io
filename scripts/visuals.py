@@ -132,3 +132,46 @@ def make_meme(top_text, bottom_text, scene_prompt, out_dir=None, slug=None):
     out_path = out_dir / f"{slug}.jpg"
     img.save(out_path, format="JPEG", quality=90)
     return out_path
+
+
+def make_infographic(headline, body, scene_prompt, out_dir=None, slug=None):
+    """Pollinations illustration + white bordered text block bottom-third."""
+    out_dir = Path(out_dir) if out_dir else SOCIAL_IMG_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    slug = slug or _slugify(headline)
+    url = pollinations_url(scene_prompt)
+    from io import BytesIO
+    data = _fetch_with_retry(url)
+    img = Image.open(BytesIO(data)).convert("RGB")
+    w, h = img.size
+    draw = ImageDraw.Draw(img)
+
+    block_h = int(h * 0.42)
+    block_y = h - block_h
+    draw.rectangle([(0, block_y), (w, h)], fill="white")
+    draw.rectangle(
+        [(20, block_y + 20), (w - 20, h - 20)],
+        outline="black", width=6,
+    )
+
+    headline_font = ImageFont.truetype(str(FONT_PATH), int(w * 0.055))
+    body_font = ImageFont.truetype(str(FONT_PATH), int(w * 0.038))
+
+    pad = 60
+    cur_y = block_y + 40
+    bbox = draw.textbbox((0, 0), headline.upper(), font=headline_font)
+    line_w = bbox[2] - bbox[0]
+    draw.text(((w - line_w) // 2, cur_y), headline.upper(), font=headline_font, fill="black")
+    cur_y += (bbox[3] - bbox[1]) + 30
+
+    body_lines = _wrap_text(body, max_width_chars=36)
+    line_h = int(w * 0.052)
+    for line in body_lines:
+        bb = draw.textbbox((0, 0), line, font=body_font)
+        lw = bb[2] - bb[0]
+        draw.text(((w - lw) // 2, cur_y), line, font=body_font, fill="black")
+        cur_y += line_h
+
+    out_path = out_dir / f"{slug}.jpg"
+    img.save(out_path, format="JPEG", quality=90)
+    return out_path

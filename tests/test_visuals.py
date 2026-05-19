@@ -55,3 +55,21 @@ def test_wrap_text_long_breaks():
     assert len(lines) >= 2
     for line in lines:
         assert len(line) <= 24
+
+
+def test_make_infographic_writes_jpg(tmp_path):
+    from io import BytesIO
+    img = Image.new("RGB", (1080, 1080), "white")
+    buf = BytesIO()
+    img.save(buf, format="JPEG")
+    fake_jpeg = buf.getvalue()
+    with patch("visuals.requests.get") as mock_get:
+        mock_get.return_value = MagicMock(status_code=200, content=fake_jpeg)
+        out = visuals.make_infographic(
+            headline="ЗНАЕТЕ ЛИ ЧЕ",
+            body="България има над 260 различни услуги изискващи лично присъствие.",
+            scene_prompt="bureaucracy desk",
+            out_dir=tmp_path,
+            slug="info-test",
+        )
+    assert out.exists()
